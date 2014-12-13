@@ -1,2 +1,6 @@
 .ph
 *.html
+*.svg
+*.png
+*.pdf
+*.ps

@@ -1,4 +1,195 @@
-Title
+Naïve Benchmark of GnuPG 2.1 Symmetric Algorithms
+=================================================
+
+Some symmetric algo bencmarks already exist, but they still don't answer
+to a typical question for a typical setup:
+
+`I do a regular backup of N (or even K) gigabytes. I don't want the
+backup to be readable by a random hacker form Russia (if he breaks into
+my server). What algo should I use to encrypt the backup as fast as
+possible?`
+
+This rules out many existing benchmarks.
+
+The typical setup also includes gpg2 that internally uses libgcrypt
+library. I don't care about tests for an algo in general (like 'I read
+once that Rijndael is fast & 3DES is slow'), I'm interested in a
+particular implementation that runs on my machines.
+
+Note that benchmarks below are not 'scientific' in any way; they are
+meant to be useful only for 1 specific operation: encrypting relatively
+big binary blobs.
+
+gpg2 cli program
+----------------
+
+The first thing I did was to run ::
+
+  $ gpg2 --batch --passphrase 12345 -o out --cipher-algo '<ALGO>' -c < file.tar.gz
+
+But was quickly saddened because the results weren't consistent: the
+deviation between runs was too big.
+
+What we needed here was to dissociate the crypto from the IO.
+
+libgcrypt
+---------
+
+'Modern' versions of GnuPG have detached most of the crypto magick into
+a separate low-level library. If we want to test symmetric ciphers w/o
+any additional baggage, the option of writing a nano version of gpg2
+becomes very appealing.
+
+It'll read some bytes from /dev/urandom, pad them if a block cipher mode
+requires it, generate IV, encrypt, prepend IV to an encrypted text,
+append MAC, run this for all ligcrypt supported ciphers. Then we'll draw
+a pretty graph & will brag about it to coworkers.
+
+The problem is that there is no any docs (at least I haven't found them)
+about a general format that gpg2 uses for a block ciphers. And you need
+it because a decipher must be able to know what the algo was used, its
+cipher mode, where to search fo a stored IV, etc.
+
+There is OpenPGP RFC 4880 of course:
+
+  The data is encrypted in CFB mode, with a CFB shift size equal to the
+  cipher's block size.  The Initial Vector (IV) is specified as all
+  zeros.  Instead of using an IV, OpenPGP prefixes a string of length
+  equal to the block size of the cipher plus two to the data before it
+  is encrypted.
+
+That's better than nothing, but leaves us w/ n hours of struggling to
+write & test code that'll produce a encrypted stream suitable for gpg2.
+
+GPGME
 -----
 
-Hi
+GnuPG has an official library that even has binding for such languages
+as Ruby. It's an opposite of libgcrypt: it does all the work for you,
+where libgcrypt doesn't even provide auto padding.
+
+The trouble w/ gpgme is that it was unusable for automated testing puposes
+until GnuPG hit 2.1 version number this fall.
+
+For example,
+
+* Versions 2.0.x cannot read passwords w/o pinentry.
+* At the time of writing, 2.1 isn't available on any major Linux
+  distribution (except Arch, but I'm not using it anywhere (maybe I
+  should)).
+
+Writing a Benchmark
+-------------------
+
+ruby-gpgme has a nifty example for symmetric ciphers::
+
+  crypto = GPGME::Crypto.new password: '12345'
+  r = crypto.encrypt "Hello world!\n", symmetric: true
+
+where ``r.read()`` will return an encrypted string.
+
+We have 2 problems here:
+
+1. There is absolutely no way to change through the API the symmetric
+   cipher. (The default one is CAST5.) This isn't the fault of
+   ruby-gpgme, but the very same gpgme library under it.
+
+   GnuPG has a concept of a 'home' directory (it has nothing to do w/
+   user's home directory but uses it as a default). Each 'home' can have
+   its number of configuration files. We need ``gpg.conf`` file there w/ a
+   line::
+
+     personal-cipher-preferences <algo>
+
+2. The modest ``password: '12345'`` option does nothing unless gpg1 is
+   used. W/ gnupg 2.0.x an annoying pinentry window will popup.
+
+   Installing 2.1 is the only option. Instead of breaking your system w/
+   overriting the existing 2.0.x installation, `install 2.1 under a
+   separate prefix <http://wiki.gnupg.org/Build2.1_Unix>`_ (for example,
+   to ``~/tmp/gnupg``).
+
+   Next, for each gpg 'home' directory we need to add to `gpg.conf`
+   another line::
+
+     pinentry-mode loopback
+
+   & create a ``gpg-agent.conf`` file w/ a line::
+
+     allow-loopback-pinentry
+
+The benchmark works like this:
+
+0. Before running any crypto operations, for each cipher we create a
+   'home' directory & fill it w/ custom ``gpg.conf`` &
+   ``gpg-agent.conf`` files.
+
+1. Start a bunch of copies of gpg-agent, each for a different 'home'
+   dir.
+
+2. Add to the ``PATH`` a bin directory of our fresh gnupg 2.1
+   installation, for example ``~/tmp/gnupg/bin``.
+
+3. Set ``LD_LIBRARY_PATH`` to ``~/tmp/gnupg/lib``.
+
+4. Generate 'plaint text' as n bytes from /dev/urandom.
+
+5. Encode 'plain text' w/ a list of all supported symmetric ciphers.
+
+6. Print the results.
+
+Ruby script that does this can be cloned form
+https://github.com/gromnitsky/gpg-algo-speed. You'll need gpgme &
+benchmark-ips gems. Run it from the cloned dir.
+
+Results
+-------
+
+i3-3120M, Fedora under VMware 10::
+
+  $ ./benchmark /opt/tmp/gnupg $((256*1024*1042))
+  Plain text size: 273,154,048B
+  Calculating -------------------------------------
+  [...]
+                  idea      0.030  (± 0.0%) i/s -      1.000  in  32.911036s
+                  3des      0.022  (± 0.0%) i/s -      1.000  in  44.447340s
+                 cast5      0.031  (± 0.0%) i/s -      1.000  in  31.912815s
+              blowfish      0.033  (± 0.0%) i/s -      1.000  in  30.709297s
+                   aes      0.032  (± 0.0%) i/s -      1.000  in  31.238303s
+                aes192      0.031  (± 0.0%) i/s -      1.000  in  31.772307s
+                aes256      0.032  (± 0.0%) i/s -      1.000  in  31.583405s
+               twofish      0.032  (± 0.0%) i/s -      1.000  in  30.818128s
+           camellia128      0.032  (± 0.0%) i/s -      1.000  in  31.237497s
+           camellia192      0.031  (± 0.0%) i/s -      1.000  in  32.390208s
+           camellia256      0.031  (± 0.0%) i/s -      1.000  in  32.550956s
+
+  Comparison:
+              blowfish:        0.0 i/s
+               twofish:        0.0 i/s - 1.00x slower
+           camellia128:        0.0 i/s - 1.02x slower
+                   aes:        0.0 i/s - 1.02x slower
+                aes256:        0.0 i/s - 1.03x slower
+                aes192:        0.0 i/s - 1.03x slower
+                 cast5:        0.0 i/s - 1.04x slower
+           camellia192:        0.0 i/s - 1.05x slower
+           camellia256:        0.0 i/s - 1.06x slower
+                  idea:        0.0 i/s - 1.07x slower
+                  3des:        0.0 i/s - 1.45x slower
+
+Sempron 145, Fedora::
+
+  ...
+
+Sempron 145, Fedora::
+
+  ...
+
+All 3 tests combined:
+
+.. raw:: html
+
+   <img src='simple.svg' width='90%'>
+
+(The plot is written in Grap. It doesn't really matter but I wanted to
+show off that I was tinkering w/ a Bell Labs language from 1984 that
+nobody is using anymore.)

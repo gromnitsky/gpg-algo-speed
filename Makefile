@@ -6,13 +6,9 @@ all:
 
 include ../../mk/debug.mk
 include ../../mk/blog_entry.mk
+include ../../mk/clean.mk
 
 all: compile
-
-.PHONY: compile
-compile: $(compile)
-
-include ../../mk/clean.mk
 
 define help :=
 view    -- view a local post in a browser
@@ -28,3 +24,14 @@ endef
 help:
 	@:
 	$(info $(help))
+
+pdf := $(patsubst %.grap, %.pdf, $(wildcard *.grap))
+ps := $(patsubst %.pdf, %.ps, $(pdf))
+svg := $(patsubst %.pdf, %.svg, $(pdf))
+png := $(patsubst %.pdf, %.png, $(pdf))
+
+clean += $(pdf) $(ps) $(svg) $(png)
+compile += $(pdf) $(ps) $(svg)
+
+.PHONY: compile
+compile: $(compile)

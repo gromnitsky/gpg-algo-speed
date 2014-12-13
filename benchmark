@@ -1,0 +1,86 @@
+#!/usr/bin/env ruby
+
+require 'fileutils'
+
+require 'benchmark/ips'
+require 'gpgme'
+
+def usage
+  $stderr.puts "Usage: #{File.basename $0} gnupg2.1-prefix [plain-text-size] [warmup-sec]\n\n"
+  $stderr.puts "  #{File.basename $0} /opt/tmp/gnupg"
+  $stderr.puts "  #{File.basename $0} /opt/tmp/gnupg $((256*1024*1042))"
+  $stderr.puts "  #{File.basename $0} /opt/tmp/gnupg $((256*1024*1042)) 80"
+  exit 1
+end
+
+$conf = {
+  prefix: ARGV[0] || usage(),
+  input_size: (ARGV[1].to_i <= 0 ? 10000*1000 : ARGV[1].to_i),
+  warmup: (ARGV[2].to_i <= 0 ? 2 : ARGV[2].to_i),
+
+  ciphers: ['idea', '3des', 'cast5', 'blowfish', 'aes', 'aes192', 'aes256',
+            'twofish', 'camellia128', 'camellia192', 'camellia256'],
+  ciphers_homes: [__dir__, 'ciphers-homes'].join('/'),
+}
+
+def cleanup
+  system 'pkill gpg-agent'
+  FileUtils.rm_rf $conf[:ciphers_homes]
+end
+
+
+
+[1, 2, 15].each do |sig|
+  trap sig do
+    cleanup()
+    exit 1
+  end
+end
+
+cleanup()
+ENV['LD_LIBRARY_PATH'] = "#{$conf[:prefix]}/lib"
+ENV['PATH'] = "#{$conf[:prefix]}/bin:#{ENV['PATH']}"
+
+$conf[:ciphers].each do |idx|
+  dir = [$conf[:ciphers_homes], idx].join '/'
+
+  FileUtils.mkdir_p dir
+  File.open [dir, 'gpg.conf'].join('/'), 'w' do |fd|
+    fd.write "personal-cipher-preferences #{idx}\n"
+    fd.write "pinentry-mode loopback\n"
+  end
+
+  File.open [dir, 'gpg-agent.conf'].join('/'), 'w' do |fd|
+    fd.write "allow-loopback-pinentry\n"
+  end
+
+  spawn "gpg-agent --homedir #{dir} --use-standard-socket --daemon", err: '/dev/null'
+end
+
+puts "Plain text size: #{$conf[:input_size].to_s.reverse.scan(/(?:\d*\.)?\d{1,3}-?/).join(',').reverse}B"
+plain_text = File.read '/dev/urandom', $conf[:input_size]
+
+
+
+Benchmark.ips do |x|
+  x.warmup = $conf[:warmup]
+  x.time = ($conf[:warmup] * 2.5).to_i
+
+  $conf[:ciphers].each do |idx|
+    dir = [$conf[:ciphers_homes], idx].join '/'
+
+    x.report(idx) do
+      GPGME::Engine.home_dir = dir
+      crypto = GPGME::Crypto.new password: '12345'
+      crypto.encrypt plain_text, symmetric: true
+
+#    encrypted = [dir, 'encrypted'].join '/'
+#      File.open(encrypted, 'w') {|fd| fd.write r.read() }
+    end
+
+  end
+
+  x.compare!
+end
+
+cleanup()

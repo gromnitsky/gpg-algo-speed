@@ -1,0 +1,37 @@
+.G1
+frame invis wid 6 bot solid left solid
+label bot "Elapsed Time, s (log scale)" down .1
+label top "\(bu 256M, \(sq 1G, \(*D 5G" down .3
+
+cur_y = 1
+axes_x_min = 0
+axes_x_max = 0
+copy "test.data" thru {
+	# $2    == x
+	# cyr_y == y
+	
+	tick left at cur_y "$1" # algo name
+	
+	if axes_x_min == 0 then {
+	   axes_x_min = $2
+	   axes_x_max = $4
+	}
+
+	line dotted from 1,cur_y to $2,cur_y
+	bullet at $2,cur_y
+
+	line solid from $2,cur_y to $3,cur_y
+	square at $3,cur_y
+
+	line dashed from $3,cur_y to $4,cur_y
+	delta at $4,cur_y
+
+	axes_x_min = min(axes_x_min, $2)
+	axes_x_max = max(axes_x_max, $4)
+	cur_y = cur_y + 1
+}
+
+coord x axes_x_min-1,axes_x_max log x
+ticks bot from floor(axes_x_min) to floor(axes_x_max) by 8 "%g" size -2
+
+.G2
