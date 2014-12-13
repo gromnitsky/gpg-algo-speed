@@ -20,7 +20,7 @@ $conf = {
 
   ciphers: ['idea', '3des', 'cast5', 'blowfish', 'aes', 'aes192', 'aes256',
             'twofish', 'camellia128', 'camellia192', 'camellia256'],
-  ciphers_homes: [__dir__, 'ciphers-homes'].join('/'),
+  ciphers_homes: [__dir__, 't'].join('/'),
 }
 
 def cleanup
@@ -48,6 +48,7 @@ $conf[:ciphers].each do |idx|
   File.open [dir, 'gpg.conf'].join('/'), 'w' do |fd|
     fd.write "personal-cipher-preferences #{idx}\n"
     fd.write "pinentry-mode loopback\n"
+    fd.write "compress-algo none\n"
   end
 
   File.open [dir, 'gpg-agent.conf'].join('/'), 'w' do |fd|
