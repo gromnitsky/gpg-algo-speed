@@ -154,7 +154,7 @@ AMD Sempron 145, Linux 3.11.7-200.fc19.x86_64
 
 .. raw:: html
 
-   <img src='simple.svg' width='80%'>
+   <img src='https://raw.github.com/gromnitsky/gpg-algo-speed/master/simple.svg' width='80%'>
 
 As we see, 3DES is indeed slower that Rijndael.
 
