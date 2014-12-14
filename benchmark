@@ -8,8 +8,8 @@ require 'gpgme'
 def usage
   $stderr.puts "Usage: #{File.basename $0} gnupg2.1-prefix [plain-text-size] [warmup-sec]\n\n"
   $stderr.puts "  #{File.basename $0} /opt/tmp/gnupg"
-  $stderr.puts "  #{File.basename $0} /opt/tmp/gnupg $((256*1024*1042))"
-  $stderr.puts "  #{File.basename $0} /opt/tmp/gnupg $((256*1024*1042)) 80"
+  $stderr.puts "  #{File.basename $0} /opt/tmp/gnupg $((256*1024*1024))"
+  $stderr.puts "  #{File.basename $0} /opt/tmp/gnupg $((256*1024*1024)) 80"
   exit 1
 end
 
@@ -63,19 +63,23 @@ plain_text = File.read '/dev/urandom', $conf[:input_size]
 
 
 
+info = {}
+
 Benchmark.ips do |x|
   x.warmup = $conf[:warmup]
   x.time = ($conf[:warmup] * 2.5).to_i
 
   $conf[:ciphers].each do |idx|
     dir = [$conf[:ciphers_homes], idx].join '/'
+    info[idx] = 0
 
     x.report(idx) do
       GPGME::Engine.home_dir = dir
       crypto = GPGME::Crypto.new password: '12345'
       crypto.encrypt plain_text, symmetric: true
+      info[idx] += 1
 
-#    encrypted = [dir, 'encrypted'].join '/'
+#      encrypted = [dir, 'encrypted'].join '/'
 #      File.open(encrypted, 'w') {|fd| fd.write r.read() }
     end
 
@@ -85,3 +89,8 @@ Benchmark.ips do |x|
 end
 
 cleanup()
+
+puts "%-11s %17s" % ["Algo", "Total Iterations"]
+info.each do |algo, iter|
+  puts "%11s %10d" % [algo, iter]
+end
