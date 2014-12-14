@@ -1,0 +1,52 @@
+$ ./benchmark /opt/tmp/gnupg $((256*1024*1024))
+Plain text size: 268,435,456B
+Calculating -------------------------------------
+                idea     1.000  i/100ms
+                3des     1.000  i/100ms
+               cast5     1.000  i/100ms
+            blowfish     1.000  i/100ms
+                 aes     1.000  i/100ms
+              aes192     1.000  i/100ms
+              aes256     1.000  i/100ms
+             twofish     1.000  i/100ms
+         camellia128     1.000  i/100ms
+         camellia192     1.000  i/100ms
+         camellia256     1.000  i/100ms
+-------------------------------------------------
+                idea      0.051  (± 0.0%) i/s -      1.000  in  19.443114s
+                3des      0.037  (± 0.0%) i/s -      1.000  in  27.137538s
+               cast5      0.059  (± 0.0%) i/s -      1.000  in  16.850647s
+            blowfish      0.058  (± 0.0%) i/s -      1.000  in  17.183059s
+                 aes      0.059  (± 0.0%) i/s -      1.000  in  17.080337s
+              aes192      0.057  (± 0.0%) i/s -      1.000  in  17.516253s
+              aes256      0.057  (± 0.0%) i/s -      1.000  in  17.673528s
+             twofish      0.057  (± 0.0%) i/s -      1.000  in  17.533964s
+         camellia128      0.054  (± 0.0%) i/s -      1.000  in  18.359755s
+         camellia192      0.053  (± 0.0%) i/s -      1.000  in  18.712756s
+         camellia256      0.054  (± 0.0%) i/s -      1.000  in  18.684303s
+
+Comparison:
+               cast5:        0.1 i/s
+                 aes:        0.1 i/s - 1.01x slower
+            blowfish:        0.1 i/s - 1.02x slower
+              aes192:        0.1 i/s - 1.04x slower
+             twofish:        0.1 i/s - 1.04x slower
+              aes256:        0.1 i/s - 1.05x slower
+         camellia128:        0.1 i/s - 1.09x slower
+         camellia256:        0.1 i/s - 1.11x slower
+         camellia192:        0.1 i/s - 1.11x slower
+                idea:        0.1 i/s - 1.15x slower
+                3des:        0.0 i/s - 1.61x slower
+
+Algo         Total Iterations
+       idea          2
+       3des          2
+      cast5          2
+   blowfish          2
+        aes          2
+     aes192          2
+     aes256          2
+    twofish          2
+camellia128          2
+camellia192          2
+camellia256          2

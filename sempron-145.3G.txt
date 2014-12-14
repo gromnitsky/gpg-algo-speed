@@ -1,0 +1,29 @@
+ $ ./benchmark /opt/tmp/gnupg $((3*1024*1024*1024))
+Plain text size: 3,221,225,472B
+Calculating -------------------------------------
+[...]
+                idea      0.002  (± 0.0%) i/s -      1.000  in 577.288241s
+                3des      0.002  (± 0.0%) i/s -      1.000  in 531.293923s
+               cast5      0.002  (± 0.0%) i/s -      1.000  in 563.292987s
+            blowfish      0.002  (± 0.0%) i/s -      1.000  in 471.827148s
+                 aes      0.002  (± 0.0%) i/s -      1.000  in 662.029539s
+              aes192      0.002  (± 0.0%) i/s -      1.000  in 460.494229s
+              aes256      0.001  (± 0.0%) i/s -      1.000  in 936.904671s
+             twofish      0.002  (± 0.0%) i/s -      1.000  in 487.047939s
+         camellia128      0.002  (± 0.0%) i/s -      1.000  in 651.676528s
+         camellia192      0.002  (± 0.0%) i/s -      1.000  in 437.350716s
+         camellia256      0.001  (± 0.0%) i/s -      1.000  in 812.582789s
+
+Comparison:
+         camellia192:        0.0 i/s
+              aes192:        0.0 i/s - 1.05x slower
+            blowfish:        0.0 i/s - 1.08x slower
+             twofish:        0.0 i/s - 1.11x slower
+                3des:        0.0 i/s - 1.21x slower
+               cast5:        0.0 i/s - 1.29x slower
+                idea:        0.0 i/s - 1.32x slower
+         camellia128:        0.0 i/s - 1.49x slower
+                 aes:        0.0 i/s - 1.51x slower
+         camellia256:        0.0 i/s - 1.86x slower
+              aes256:        0.0 i/s - 2.14x slower
+
